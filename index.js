@@ -1,7 +1,10 @@
 const express = require("express");
+// const bcrypt = require("bcryptjs");
 
 const db = require("./dbConnectExec.js");
 const app = express();
+
+app.use(express.json());
 
 app.listen(5000, () => {
   console.log("app is running on port 5000");
@@ -18,6 +21,57 @@ app.get("/", (req, res) => {
 // app.post()
 // app.put()
 
+app.post("/roommate/login", async (req, res) => {
+  console.log("/roommate/login called", res.body);
+});
+
+app.post("/roommate", async (req, res) => {
+  // res.send("/roommate called");
+
+  // console.log("request body", req.body);
+
+  let nameFirst = req.body.nameFirst;
+  let nameLast = req.body.nameLast;
+  let phone = req.body.phone;
+  let email = req.body.email;
+  let password = req.body.password;
+
+  if (!nameFirst || !!nameLast || !phone || !email || !password) {
+    return res.status(400).send("Bad request");
+  }
+
+  nameFirst = nameFirst.replace("'", "''");
+  nameLast = nameLast.replace("'", "''");
+
+  let emailCheckQuery = `SELECT Email
+  FROM Roommate
+  WHERE Email = '${email}'`;
+
+  let existingUser = await db.executeQuery(emailCheckQuery);
+
+  // console.log("exising user", existingUser);
+
+  if (existingUser[0]) {
+    return res.status(409).send("Duplicate email");
+  }
+
+  // let hashedPassword = bcrypt.hashSync(password);
+
+  let insertQuery = `INSERT INTO Roommate(FirstName, LastName, Phone, Email, Password,HouseholdFK)
+  VALUES('${nameFirst}','${nameLast}','${phone}','${email}','${password}','4')`;
+
+  db.executeQuery(insertQuery)
+    .then(() => {
+      res.status(201).send();
+    })
+    .catch((err) => {
+      console.log("error in POST /Roommate", err);
+      res.status(500).send();
+    });
+});
+
+app.post("/chores", (req, res) => {});
+
 app.get("/chores", (req, res) => {
   //get data from the database
   db.executeQuery(
@@ -29,7 +83,7 @@ app.get("/chores", (req, res) => {
     .then((theResults) => {
       res.status(200).send(theResults);
     })
-    .catch((nyError) => {
+    .catch((myError) => {
       console.log(myError);
       res.status(500).send();
     });
