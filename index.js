@@ -42,9 +42,22 @@ app.post("/roommate/logout", auth, (req, res) => {
     });
 });
 
-app.get("/needs/me", auth, async (req, res) => {
+app.get("/need/me", auth, async (req, res) => {
   //1. get the roommatePK
+  let roommatePK = req.roommate.RoommatePK;
+  console.log(roommatePK);
+
   //2. query the database for user's records
+  let query = `SELECT *
+  FROM Need
+  LEFT JOIN Roommate
+  ON Roommate.RoommatePK = Need.RoommateFK
+  WHERE Roommate.RoommatePK = ${roommatePK}`;
+
+  result = await db.executeQuery(query);
+
+  res.send(result);
+
   //3. send user's reviews back to them
 });
 
@@ -120,6 +133,8 @@ WHERE RoommatePK = ${user.RoommatePK}`;
   }
 });
 
+// -------------------------------------------------------------------------------------------------
+// CREATE NEW ROOMMATE
 app.post("/roommate", async (req, res) => {
   // res.send("/roommate called");
 
@@ -169,7 +184,55 @@ app.post("/roommate", async (req, res) => {
     });
 });
 
+// -------------------------------------------------------------------------------------------------
+// CREATE NEW CHORE
 app.post("/chores", (req, res) => {});
+
+// -------------------------------------------------------------------------------------------------
+// GET ASSIGNMENT ON PARTICULAR CHORE
+// app.get("/chores", auth, async (req, res) => {
+//   //get data from the database
+//   db.executeQuery(
+//     `SELECT *
+//   FROM Chore
+//   LEFT JOIN Roommate
+//   ON Roommate.RoommatePK = Chore.RoommatePK`
+//   )
+//     .then((theResults) => {
+//       res.status(200).send(theResults);
+//     })
+//     .catch((myError) => {
+//       console.log(myError);
+//       res.status(500).send();
+//     });
+// });
+
+// -------------------------------------------------------------------------------------------------
+// GET ALL CHORES FOR SPECIFIED HOUSEHOLD
+// app.get("/chores", auth, async (req, res) => {
+//   //let pk = req.params.pk;
+//   //   console.log(pk);
+//   let myQuery = `SELECT *
+//     FROM Chore
+//     LEFT JOIN Roommate
+// 	ON Roommate.HouseholdFK = Chore.HouseholdFK
+// 	WHERE Roommate.HouseholdFK = ${req.roommate.HouseholdFK} AND Roommate.RoommatePK = Chore.RoommateFK`;
+
+//   db.executeQuery(myQuery)
+//     .then((result) => {
+//       // console.log("result", result);
+//       if (result[0]) {
+//         res.send(result[0]);
+//         console.log("result", result[0]);
+//       } else {
+//         res.status(404).send(`bad request`);
+//       }
+//     })
+//     .catch((err) => {
+//       console.log("Error in /chores", err);
+//       res.status(500).send();
+//     });
+// });
 
 app.get("/chores", (req, res) => {
   //get data from the database
@@ -182,11 +245,38 @@ app.get("/chores", (req, res) => {
     .then((theResults) => {
       res.status(200).send(theResults);
     })
-    .catch((myError) => {
+    .catch((nyError) => {
       console.log(myError);
       res.status(500).send();
     });
 });
+
+// -------------------------------------------------------------------------------------------------
+// GET ALL CHORES FOR SPECIFIED ROOMMATE
+// app.get("/chores/:pk", auth, async (req, res) => {
+//   //let pk = req.params.pk;
+//   //   console.log(pk);
+//   let myQuery = `SELECT *
+//     FROM Chore
+//     LEFT JOIN Roommate
+//     ON Roommate.RoommatePK = Chore.RoommateFK
+//     WHERE RoommateFK = ${req.roommate.RoommatePK}`;
+
+//   db.executeQuery(myQuery)
+//     .then((result) => {
+//       // console.log("result", result);
+//       if (result[0]) {
+//         res.send(result[0]);
+//         console.log("result", result[0]);
+//       } else {
+//         res.status(404).send(`bad request`);
+//       }
+//     })
+//     .catch((err) => {
+//       console.log("Error in /chores/:pk", err);
+//       res.status(500).send();
+//     });
+// });
 
 app.get("/chores/:pk", (req, res) => {
   let pk = req.params.pk;
@@ -212,7 +302,8 @@ app.get("/chores/:pk", (req, res) => {
     });
 });
 
-//Create need
+// -------------------------------------------------------------------------------------------------
+// CREATE NEW ITEM NEED
 app.post("/need", auth, async (req, res) => {
   try {
     let item = req.body.item;
@@ -238,28 +329,3 @@ app.post("/need", auth, async (req, res) => {
     res.status(500).send();
   }
 });
-
-// app.get("/need", async (req, res)=>{
-//   let needPK = `SELECT NeedPK
-//   FROM Need
-//   WHERE Item = ${item} AND HouseholdFK = ${householdPK}`;
-// })
-
-// app.post("/needComp", async (req, res)=>{
-//   try {
-//     let item = req.body.item;
-//     roommatePK = req.body.roommateFK;
-//     householdPK = req.body.householdFK;
-
-//     if (!item) {
-//       return res.status(400).send("bad request");
-//     }
-
-//     item = item.replace("'", "''");
-//     item = item.toLowerCase();
-//     console.log("item", item);
-//   } catch (err) {
-//     console.log("error in POST /need", err);
-//     res.status(500).send();
-//   }
-// })
