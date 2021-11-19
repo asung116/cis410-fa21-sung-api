@@ -1,7 +1,9 @@
 const express = require("express");
-// const bcrypt = require("bcryptjs");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 const db = require("./dbConnectExec.js");
+const roommateConfig = require("./config.js");
 const app = express();
 
 app.use(express.json());
@@ -22,7 +24,71 @@ app.get("/", (req, res) => {
 // app.put()
 
 app.post("/roommate/login", async (req, res) => {
-  console.log("/roommate/login called", res.body);
+  // console.log("/roommate/login called", req.body);
+
+  //1. data validation
+  let email = req.body.email;
+  let password = req.body.password;
+
+  if (!email || !password) {
+    return res.status(400).send("Bad request");
+  }
+
+  //2. check that user esits in DB
+  let query = `SELECT * 
+  FROM Roommate 
+  WHERE email = '${email}'`;
+
+  let result;
+  try {
+    result = await db.executeQuery(query);
+  } catch (myError) {
+    console.log("error in /roommate/login", myError);
+    return res.status(500).send();
+  }
+
+  // console.log("result", result);
+
+  if (!result[0]) {
+    return res.status(401).send("Invalid user credentials");
+  }
+
+  //3. check password
+  let user = result[0];
+  if (!bcrypt.compareSync(password, user.Password)) {
+    console.log("invalid password");
+    return res.status(401).send("Invalid user credentials");
+  }
+
+  //4. generate token
+
+  let token = jwt.sign({pk: user.RoommatePK}, roommateConfig.JWT, {
+    expiresIn: "60 minutes",
+  });
+
+  console.log("token", token);
+
+  //5. save token in DB and send response
+  let setTokenQuery = `UPDATE Roommate
+SET Token = '${token}'
+WHERE RoommatePK = ${user.RoommatePK}`;
+
+  try {
+    await db.executeQuery(setTokenQuery);
+
+    res.status(200).send({
+      token: token,
+      user: {
+        FirstName: user.FirstName,
+        LastName: user.LastName,
+        Email: user.Email,
+        RoommatePK: user.RoommatePK,
+      },
+    });
+  } catch (myError) {
+    console.log("error in setting user token", myError);
+    res.status(500).send();
+  }
 });
 
 app.post("/roommate", async (req, res) => {
@@ -37,7 +103,7 @@ app.post("/roommate", async (req, res) => {
   let password = req.body.password;
 
   //Check that all fields are filled, we must have complete info
-  if (!nameFirst || !!nameLast || !phone || !email || !password) {
+  if (!nameFirst || !nameLast || !phone || !email || !password) {
     return res.status(400).send("Bad request");
   }
 
@@ -58,11 +124,11 @@ app.post("/roommate", async (req, res) => {
     return res.status(409).send("Duplicate email");
   }
 
-  // let hashedPassword = bcrypt.hashSync(password);
+  let hashedPassword = bcrypt.hashSync(password);
 
   // Insert new info to db
   let insertQuery = `INSERT INTO Roommate(FirstName, LastName, Phone, Email, Password,HouseholdFK)
-  VALUES('${nameFirst}','${nameLast}','${phone}','${email}','${password}','4')`;
+  VALUES('${nameFirst}','${nameLast}','${phone}','${email}','${hashedPassword}','4')`;
 
   db.executeQuery(insertQuery)
     .then(() => {
@@ -116,3 +182,61 @@ app.get("/chores/:pk", (req, res) => {
       res.status(500).send();
     });
 });
+
+// app.get("/roommate/:pk and /household/:pk", (req, res) => {
+//   let roommatePK = `SELECT RoommatePK
+//   FROM Roommate
+//   WHERE LastName = ${lastName} AND FirstName= ${firstName}`;
+
+//   let householdPK = `SELECT HouseholdFK
+//   FROM Roommate
+//   WHERE LastName = ${lastName} AND FirstName= ${firstName}`;
+// });
+
+const auth = async (req, res, next) => {
+  console.log("in the middleware", req);
+};
+
+//Create need
+app.post("/need", auth, async (req, res) => {
+  try {
+    let item = req.body.item;
+    roommatePK = req.body.roommateFK;
+    householdPK = req.body.householdFK;
+
+    if (!item) {
+      return res.status(400).send("bad request");
+    }
+
+    item = item.replace("'", "''");
+    console.log("item", item);
+  } catch (err) {
+    console.log("error in POST /need", err);
+    res.status(500).send();
+  }
+});
+
+// app.get("/need", async (req, res)=>{
+//   let needPK = `SELECT NeedPK
+//   FROM Need
+//   WHERE Item = ${item} AND HouseholdFK = ${householdPK}`;
+// })
+
+// app.post("/needComp", async (req, res)=>{
+//   try {
+//     let item = req.body.item;
+//     roommatePK = req.body.roommateFK;
+//     householdPK = req.body.householdFK;
+
+//     if (!item) {
+//       return res.status(400).send("bad request");
+//     }
+
+//     item = item.replace("'", "''");
+//     item = item.toLowerCase();
+//     console.log("item", item);
+//   } catch (err) {
+//     console.log("error in POST /need", err);
+//     res.status(500).send();
+//   }
+// })

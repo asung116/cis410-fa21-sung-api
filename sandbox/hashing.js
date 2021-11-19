@@ -1,9 +1,9 @@
-// const bcrypt = require("bcryptjs");
+const bcrypt = require("bcryptjs");
 
-// let hashedPassword = bcrypt.hashSync("csu123");
+let hashedPassword = bcrypt.hashSync("password");
 
-// console.log(hashedPassword);
+console.log(hashedPassword);
 
-// let hashTest = bcrypt.compareSync("csu123", hashedPassword);
+let hashTest = bcrypt.compareSync("password", hashedPassword);
 
-// console.log(hashTest);
+console.log(hashTest);
