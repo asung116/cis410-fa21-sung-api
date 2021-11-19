@@ -4,8 +4,9 @@ const jwt = require("jsonwebtoken");
 
 const db = require("./dbConnectExec.js");
 const roommateConfig = require("./config.js");
-const app = express();
+const auth = require("./middleware/authenticate");
 
+const app = express();
 app.use(express.json());
 
 app.listen(5000, () => {
@@ -22,6 +23,10 @@ app.get("/", (req, res) => {
 
 // app.post()
 // app.put()
+
+app.get("/roommate/me", auth, (req, res) => {
+  res.send(req.roommate);
+});
 
 app.post("/roommate/login", async (req, res) => {
   // console.log("/roommate/login called", req.body);
@@ -183,33 +188,27 @@ app.get("/chores/:pk", (req, res) => {
     });
 });
 
-// app.get("/roommate/:pk and /household/:pk", (req, res) => {
-//   let roommatePK = `SELECT RoommatePK
-//   FROM Roommate
-//   WHERE LastName = ${lastName} AND FirstName= ${firstName}`;
-
-//   let householdPK = `SELECT HouseholdFK
-//   FROM Roommate
-//   WHERE LastName = ${lastName} AND FirstName= ${firstName}`;
-// });
-
-const auth = async (req, res, next) => {
-  console.log("in the middleware", req);
-};
-
 //Create need
 app.post("/need", auth, async (req, res) => {
   try {
     let item = req.body.item;
-    roommatePK = req.body.roommateFK;
-    householdPK = req.body.householdFK;
 
     if (!item) {
       return res.status(400).send("bad request");
     }
 
     item = item.replace("'", "''");
-    console.log("item", item);
+    // console.log("item", item);
+    // console.log("here is the roommate", req.roommate);
+
+    let insertQuery = `INSERT INTO Need(Item, HouseholdFK)
+    OUTPUT inserted.NeedPK, inserted.Item
+    VALUES('${item}', ${req.roommate.HouseholdFK})`;
+
+    let insertedNeed = await db.executeQuery(insertQuery);
+    // console.log(insertedNeed);
+    // res.send("here is the response");
+    res.status(201).send(insertedNeed[0]);
   } catch (err) {
     console.log("error in POST /need", err);
     res.status(500).send();
