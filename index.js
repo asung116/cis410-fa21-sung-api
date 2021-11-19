@@ -36,13 +36,16 @@ app.post("/roommate", async (req, res) => {
   let email = req.body.email;
   let password = req.body.password;
 
+  //Check that all fields are filled, we must have complete info
   if (!nameFirst || !!nameLast || !phone || !email || !password) {
     return res.status(400).send("Bad request");
   }
 
+  //Make sure that if there is a name like O'Neil the ' wont mess it up. Replaces one ' with two ''
   nameFirst = nameFirst.replace("'", "''");
   nameLast = nameLast.replace("'", "''");
 
+  // Makre sure the email is not already in db
   let emailCheckQuery = `SELECT Email
   FROM Roommate
   WHERE Email = '${email}'`;
@@ -57,6 +60,7 @@ app.post("/roommate", async (req, res) => {
 
   // let hashedPassword = bcrypt.hashSync(password);
 
+  // Insert new info to db
   let insertQuery = `INSERT INTO Roommate(FirstName, LastName, Phone, Email, Password,HouseholdFK)
   VALUES('${nameFirst}','${nameLast}','${phone}','${email}','${password}','4')`;
 
