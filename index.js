@@ -28,6 +28,26 @@ app.get("/", (req, res) => {
 // app.post()
 // app.put()
 
+app.post("/roommate/logout", auth, (req, res) => {
+  let query = `UPDATE Roommate
+  SET token = NULL
+  WHERE RoommatePK = ${req.roommate.RoommatePK}`;
+  db.executeQuery(query)
+    .then(() => {
+      res.status(200).send();
+    })
+    .catch((err) => {
+      console.log("error in POST /roommate/logout", err);
+      res.status(500).send();
+    });
+});
+
+app.get("/needs/me", auth, async (req, res) => {
+  //1. get the roommatePK
+  //2. query the database for user's records
+  //3. send user's reviews back to them
+});
+
 app.get("/roommate/me", auth, (req, res) => {
   res.send(req.roommate);
 });
