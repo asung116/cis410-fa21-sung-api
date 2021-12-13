@@ -125,6 +125,7 @@ WHERE RoommatePK = ${user.RoommatePK}`;
         LastName: user.LastName,
         Email: user.Email,
         RoommatePK: user.RoommatePK,
+        HouseholdFK: user.HouseholdFK,
       },
     });
   } catch (myError) {
@@ -187,26 +188,30 @@ app.post("/roommate", async (req, res) => {
 
 // -------------------------------------------------------------------------------------------------
 // SEE ALL ROOMMATES
-app.get("/roommates/:pk", (req, res) => {});
-db.executeQuery(
-  `SELECT * FROM Roommate
-WHERE Roommate.HouseholdFK = ${req.roommate.HouseholdFK}`
-)
-  .then((theResults) => {
-    res.status(200).send(theResults);
-  })
-  .catch((myError) => {
-    console.log(myError);
-    res.status(500).send();
-  });
+app.get("/roommates/:pk", auth, async (req, res) => {
+  let householdPK = req.body.HouseholdFK;
+  db.executeQuery(
+    `SELECT * FROM Roommate
+WHERE Roommate.HouseholdFK = ${householdPK}`
+  )
+    .then((theResults) => {
+      res.status(200).send(theResults);
+    })
+    .catch((myError) => {
+      console.log(myError);
+      res.status(500).send();
+    });
+});
 
 // -------------------------------------------------------------------------------------------------
 // GET ASSIGNMENT ON PARTICULAR CHORE
-app.get("/chores/roommate/", auth, async (req, res) => {
+app.get("/chores/roommate", auth, async (req, res) => {
   //get data from the database
+  let householdFK = req.roommate.HouseholdFK;
+  let roommatePK = req.roommate.RoommatePK;
   db.executeQuery(
     `SELECT * FROM Chore
-    WHERE Chore.HouseholdFK = ${householdPK} AND Chore.RoommateFK = ${roommateFK}`
+    WHERE Chore.HouseholdFK = ${householdFK} AND Chore.RoommateFK = ${roommatePK}`
   )
     .then((theResults) => {
       res.status(200).send(theResults);
@@ -219,18 +224,21 @@ app.get("/chores/roommate/", auth, async (req, res) => {
 
 // -------------------------------------------------------------------------------------------------
 // GET ALL CHORES FOR SPECIFIED HOUSEHOLD
-app.get("/chores/household/:pk", auth, async (req, res) => {
-  let pk = req.params.pk;
-  //   console.log(pk);
+app.get("/chores/household", auth, async (req, res) => {
+  // let pk = req.params.pk;
+  // console.log("idk", req.params);
+  //let pk = returnedUser.householdFK;
+  // console.log("pk is:", pk);
+  console.log("roommate", req.roommate.HouseholdFK);
   let myQuery = `SELECT * FROM Chore
-  WHERE Chore.HouseholdFK  = ${req.roommate.HouseholdFK}`;
+  WHERE HouseholdFK = '${req.roommate.HouseholdFK}'`;
 
   db.executeQuery(myQuery)
     .then((result) => {
       // console.log("result", result);
       if (result[0]) {
-        res.send(result[0]);
-        console.log("result", result[0]);
+        res.send(result);
+        console.log("result", result);
       } else {
         res.status(404).send(`bad request`);
       }
@@ -338,7 +346,7 @@ app.post("/needcreate", auth, async (req, res) => {
 
 // -------------------------------------------------------------------------------------------------
 // CREATE NEW HOUSEHOLD
-app.post("/createhousehold", auth, async (req, res) => {
+app.post("/createhousehold", async (req, res) => {
   try {
     let houseName = req.body.householdName;
 
@@ -349,11 +357,12 @@ app.post("/createhousehold", auth, async (req, res) => {
     houseName = houseName.replace("'", "''");
     console.log("housename", houseName);
 
-    let insertQuery = `INSERT INTO Household(HouseholdName, Address)
-    VALUES('${houseName}', ${req.body.address})`;
+    let insertQuery = `INSERT INTO Household(HouseholdName, Address) 
+    OUTPUT inserted.HouseholdPK, inserted.HouseholdName, inserted.Address
+    VALUES('${houseName}', '${req.body.address}')`;
 
     let insertedHousehold = await db.executeQuery(insertQuery);
-    console.log(insertedHousehold);
+    console.log("inserted household", insertedHousehold);
     res.send("here is the response");
     res.status(201).send(insertedHousehold[0]);
   } catch (err) {
@@ -379,3 +388,71 @@ app.post("/createhousehold", auth, async (req, res) => {
 //   }
 
 // })
+
+// -------------------------------------------------------------------------------------------------
+// CREATE NEW CHORE
+app.post("/chorecreate", auth, async (req, res) => {
+  try {
+    let chore = req.body.chore;
+    let roommateAssignment = req.body.roommateAssignment;
+    let choreDesc = req.body.choreDesc;
+    let dueDate = req.body.dueDate;
+    let roommateSelect = req.body.roommateSelect;
+
+    if (
+      !chore ||
+      !roommateAssignment ||
+      !choreDesc ||
+      !dueDate ||
+      !roommateSelect
+    ) {
+      return res.status(400).send("bad request");
+    }
+
+    chore = chore.replace("'", "''");
+    roommateAssignment = roommateAssignment.replace("'", "''");
+    choreDesc = choreDesc.replace("'", "''");
+    dueDate = dueDate.replace("'", "''");
+    roommateSelect = roommateSelect.replace("'", "''");
+    // console.log("item", item);
+    // console.log("here is the roommate", req.roommate);
+
+    let insertQuery = `INSERT INTO Chore(Chore, AssignedTo, ChoreDescription, DueDate, Completion, RoommateFK, HouseholdFK)
+    OUTPUT inserted.ChorePK, inserted.Chore, inserted.AssignedTo, inserted.ChoreDescription, inserted.DueDate, inserted.Completion, inserted.RoommateFK, inserted.HouseholdFK
+    VALUES ('${chore}', '${roommateAssignment}', '${choreDesc}', '${dueDate}', 'No', '${roommateSelect}', '${req.roommate.HouseholdFK}')`;
+
+    let insertedChore = await db.executeQuery(insertQuery);
+    console.log("inserted chore", insertedChore);
+    // res.send("here is the response");
+    res.status(201).send(insertedChore);
+  } catch (err) {
+    console.log("error in POST /chorecreate", err);
+    res.status(500).send();
+  }
+});
+
+// -------------------------------------------------------------------------------------------------
+// CREATE NEW CHORE
+app.post("/completechore", auth, async (req, res) => {
+  try {
+    let chorePK = req.body.chorePK;
+    let completedBy = req.body.completedBy;
+    // console.log("item", item);
+    // console.log("here is the roommate", req.roommate);
+
+    let insertQuery = `Update Chore
+    SET Completion = 'Yes'
+    WHERE ChorePK = ${chorePK}
+    UPDATE Chore
+    SET CompletedBy = '${completedBy}' 
+    WHERE ChorePK = ${chorePK}`;
+
+    let updatedChore = await db.executeQuery(insertQuery);
+    console.log("inserted chore", updatedChore);
+    // res.send("here is the response");
+    res.status(201).send(updatedChore);
+  } catch (err) {
+    console.log("error in POST /chorecreate", err);
+    res.status(500).send();
+  }
+});
