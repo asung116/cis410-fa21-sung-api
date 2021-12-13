@@ -1,0 +1,4 @@
+{
+  "appService.defaultWebAppToDeploy": "/subscriptions/1cbcacc7-09d9-497c-939b-53e4108178a0/resourceGroups/appsvc_linux_centralus/providers/Microsoft.Web/sites/cis410-fa21-sung-api",
+  "appService.deploySubpath": "."
+}

@@ -188,8 +188,8 @@ app.post("/roommate", async (req, res) => {
 
 // -------------------------------------------------------------------------------------------------
 // SEE ALL ROOMMATES
-app.get("/roommates/:pk", auth, async (req, res) => {
-  let householdPK = req.body.HouseholdFK;
+app.get("/myroommates", auth, async (req, res) => {
+  let householdPK = req.roommate.HouseholdFK;
   db.executeQuery(
     `SELECT * FROM Roommate
 WHERE Roommate.HouseholdFK = ${householdPK}`
@@ -363,8 +363,8 @@ app.post("/createhousehold", async (req, res) => {
 
     let insertedHousehold = await db.executeQuery(insertQuery);
     console.log("inserted household", insertedHousehold);
-    res.send("here is the response");
-    res.status(201).send(insertedHousehold[0]);
+    //res.send();
+    res.status(201).send(insertedHousehold);
   } catch (err) {
     console.log("error in POST /createhousehold", err);
     res.status(500).send();
@@ -445,7 +445,8 @@ app.post("/completechore", auth, async (req, res) => {
     WHERE ChorePK = ${chorePK}
     UPDATE Chore
     SET CompletedBy = '${completedBy}' 
-    WHERE ChorePK = ${chorePK}`;
+    WHERE ChorePK = ${chorePK};
+    SELECT * FROM Chore WHERE ChorePK = ${chorePK};`;
 
     let updatedChore = await db.executeQuery(insertQuery);
     console.log("inserted chore", updatedChore);
