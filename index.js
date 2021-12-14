@@ -298,13 +298,11 @@ app.get("/chores/:pk", (req, res) => {
   //   console.log(pk);
   let myQuery = `SELECT *
     FROM Chore
-    LEFT JOIN Roommate
-    ON Roommate.RoommatePK = Chore.RoommateFK
     WHERE ChorePK = ${pk}`;
 
   db.executeQuery(myQuery)
     .then((result) => {
-      // console.log("result", result);
+      console.log("result", result);
       if (result[0]) {
         res.send(result[0]);
       } else {
